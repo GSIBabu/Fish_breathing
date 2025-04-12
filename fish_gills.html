@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>თევზის ლაყუჩების სიმულაცია (ახალი)</title>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* --- Base Requirements CSS --- */
+
+        /* Color Palette & Variables */
+        :root {
+            --primary-color: #0077b6; /* Medium Blue */
+            --secondary-color: #00b4d8; /* Light Blue/Cyan */
+            --accent-color: #e76f51;   /* Coral */
+            --bg-color: #f8f9fa;       /* Very light grey */
+            --panel-bg-color: #ffffff;
+            --text-color: #343a40;     /* Dark grey */
+            --light-text-color: #6c757d; /* Medium grey */
+            --border-color: #dee2e6;   /* Light grey border */
+
+            /* Gill Specific Colors */
+            --micro-filament-color: rgba(240, 128, 128, 0.5); /* LightCoral semi-transparent (alpha reduced from 0.7) */
+            --micro-lamella-color: rgba(250, 128, 114, 0.4); /* Salmon semi-transparent (alpha reduced from 0.6) */
+            --micro-tint-color: rgba(255, 255, 0, 0.15); /* Hint of yellow */
+            --particle-filament-color: #FFB6C1; /* LightPink (Changed from #FFDDD2) */
+            --particle-lamella-color: #FFB6C1; /* LightPink (Changed from #FFDDD2) */
+            --artery-color: #e74c3c; /* Red */
+            --vein-color: #3498db;   /* Blue */
+            --oxygen-particle-color: #DC143C; /* Crimson Red */
+            --oxygen-text-color: #FFFFFF;    /* White */
+            --arch-bone-color: #d3d3d3; /* LightGrey */
+
+            /* View Backgrounds */
+            --micro-bg: #f5f5f5;  /* WhiteSmoke (changed from AliceBlue) */
+            --particle-bg: #e0f7fa; /* Light cyan */
+        }
+
+        * {
+             box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden; /* Prevent body scrollbars */
+        }
+
+        /* Controls Panel Styling (Left Side) */
+        #controls-panel {
+            width: 350px;
+            flex-shrink: 0;
+            padding: 25px;
+            background-color: var(--panel-bg-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            overflow-y: auto;
+            height: 100%;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Visualization Area Styling (Right Side) */
+        #visualization-area {
+            flex-grow: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column; /* Stack canvas and scale bar */
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background-color: #e9ecef; /* Slightly darker bg for the area */
+            position: relative; /* For scale bar positioning */
+        }
+
+        #canvas-container {
+             width: 95%; /* Make canvas responsive */
+             height: 85%; /* Adjust height */
+             display: flex;
+             justify-content: center;
+             align-items: center;
+             margin-bottom: 10px; /* Space before scale bar */
+             position: relative; /* Needed for absolute positioning of child scale bar */
+        }
+
+        canvas {
+            border: 1px solid var(--border-color);
+            /* Background will be set per-view in JS */
+            max-width: 100%;
+            max-height: 100%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: block;
+        }
+
+        /* Headings */
+        h1, h2 {
+            color: var(--primary-color);
+            margin-top: 0;
+            margin-bottom: 0.75em;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 0.3em;
+        }
+        h1 { font-size: 1.8em; text-align: center; }
+        h2 { font-size: 1.4em; margin-top: 1.5em;}
+
+        /* Control Groups */
+        .control-group, .simulation-results, .view-toggle-container {
+            margin-bottom: 25px;
+            padding: 15px;
+            background-color: var(--bg-color);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        label i { /* Icon styling */
+            margin-right: 8px;
+            width: 20px;
+            text-align: center;
+            color: var(--secondary-color);
+        }
+
+        /* Custom Slider Style */
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            appearance: none; -webkit-appearance: none;
+            height: 8px;
+            background: linear-gradient(to right, var(--secondary-color), var(--accent-color));
+            border-radius: 5px;
+            outline: none;
+            margin-top: 5px;
+            margin-bottom: 10px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 20px; height: 20px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid var(--panel-bg-color);
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px; height: 20px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid var(--panel-bg-color);
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+
+        /* Value Display (next to slider) */
+        #value-display-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #lamellae-value {
+            font-weight: 700;
+            font-size: 1.1em;
+            color: var(--accent-color);
+            background-color: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 4px;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        /* Results Display */
+        .results-display p {
+            margin: 8px 0;
+            font-size: 0.95em;
+            color: var(--text-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .results-display span {
+            font-weight: 600;
+            color: var(--secondary-color);
+            background-color: #e9ecef;
+            padding: 3px 10px;
+            border-radius: 4px;
+            min-width: 70px;
+            text-align: right;
+        }
+        .results-display .unit {
+            font-size: 0.8em;
+            color: var(--light-text-color);
+            margin-left: 4px;
+        }
+
+        /* View Toggle Buttons */
+        .view-toggle-container h2 {
+            font-size: 1.2em;
+            margin-bottom: 0.5em;
+            border-bottom: none;
+            text-align: center;
+        }
+        .view-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 10px; /* Add gap between buttons */
+        }
+        .view-toggle button {
+            flex: 1; /* Make buttons take equal space */
+            background-color: #e0e0e0;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s, color 0.3s;
+            font-size: 0.9em;
+            color: var(--text-color);
+        }
+        .view-toggle button.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .view-toggle button:hover:not(.active) {
+            background-color: #d0d0d0;
+        }
+
+        /* Particle Toggle Button Styling */
+        #particle-toggle-container {
+            margin-top: 15px; /* Space above particle toggles */
+            /* Stack buttons vertically */
+            display: flex;
+            flex-direction: column;
+            align-items: stretch; /* Make buttons fill width */
+            gap: 8px; /* Adjust gap for vertical layout */
+        }
+        #toggle-oxygen {
+             flex: none; /* Don't stretch this button */
+             background-color: #e9ecef;
+             border: 1px solid var(--border-color);
+        }
+        #toggle-oxygen::before { /* Keep functional color indicator */
+            content: ""; display: inline-block;
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            margin-right: 8px;
+            vertical-align: middle;
+            border: 1px solid rgba(255,255,255,0.7);
+            background-color: var(--oxygen-particle-color);
+        }
+        #toggle-oxygen.active {
+             background-color: var(--primary-color);
+             color: white;
+             border-color: var(--primary-color);
+        }
+        #toggle-oxygen.active::before {
+             border-color: white;
+        }
+        #toggle-oxygen:not(.active) {
+            color: var(--text-color);
+        }
+
+        /* CO2 Toggle Button Styling */
+        #toggle-co2 {
+            flex: none;
+            /* min-width: 120px; */ /* Removed in previous step, ensure it's gone */
+            background-color: #e9ecef;
+            border: 1px solid var(--border-color); /* Ensure default border is light */
+        }
+        #toggle-co2::before { /* Keep functional color indicator */
+            content: ""; display: inline-block;
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            margin-right: 8px;
+            vertical-align: middle;
+            border: 1px solid rgba(255,255,255,0.7); /* Restore white border */
+            background-color: #000000; /* Restore black background */
+        }
+        #toggle-co2.active {
+             background-color: var(--primary-color);
+             color: white;
+             border-color: var(--primary-color);
+         }
+          #toggle-co2.active::before {
+             border-color: white;
+         }
+         #toggle-co2:not(.active) {
+            color: var(--text-color); /* Black text when inactive */
+         }
+
+        /* Vessel Toggle Button Styling */
+        #toggle-vessels {
+            flex: none; /* Don't stretch */
+            background-color: #e9ecef;
+            border: 1px solid var(--border-color);
+        }
+        #toggle-vessels.active {
+             background-color: var(--primary-color);
+             color: white;
+             border-color: var(--primary-color);
+        }
+        #toggle-vessels:not(.active) {
+            color: var(--text-color);
+        }
+        /* Maybe add specific icon color? */
+
+        /* Scale Bar Styling */
+        #scale-bar-container {
+            position: absolute;
+            /* bottom: 30px; */ /* More inset from bottom */
+            top: 15px; /* Position near top */
+            right: 15px; /* Position near right */
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            font-size: 12px; /* Smaller font */
+            color: #333;
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+        #scale-bar {
+            height: 3px; /* Thinner bar */
+            background-color: #333;
+            position: relative;
+            transition: width 0.3s ease;
+        }
+        #scale-bar:before, #scale-bar:after {
+            content: ""; position: absolute;
+            width: 1px; height: 6px; /* Shorter ticks */
+            background-color: #333;
+            top: -1.5px; /* Center ticks vertically */
+        }
+        #scale-bar:before { left: 0; }
+        #scale-bar:after { right: 0; }
+
+        /* Description Text */
+        .description {
+             font-size: 0.9em;
+             color: var(--light-text-color);
+             margin-top: auto; /* Push to bottom */
+             padding-top: 20px;
+             line-height: 1.5;
+        }
+
+        /* Metrics display styles (copied from index_simple) */
+        .metrics-display {
+            position: absolute;
+            top: 10px; /* Position near top */
+            left: 50%; /* Center horizontally */
+            transform: translateX(-50%); /* Adjust for centering */
+            z-index: 30;
+            display: flex;
+            flex-direction: row; 
+            gap: 15px; /* Increased gap for horizontal layout */
+            pointer-events: none; 
+        }
+        .metric-badge {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 8px;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-width: 160px; /* Adjusted min-width */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .metric-badge-value {
+            font-weight: 600;
+            font-size: 1.1em; /* Adjusted size */
+            margin-left: 8px;
+        }
+        .metric-badge-label {
+            opacity: 0.8;
+            font-size: 0.9em; /* Adjusted size */
+        }
+
+        /* Remove minimal placeholder styles */
+        /* button { padding: 8px 12px; cursor: pointer; } */
+        /* input[type="range"] { width: 100%; } */
+        /* .control-group, .simulation-results, .view-toggle-container { margin-bottom: 20px; padding: 10px; border: 1px solid #eee; background: #fafafa; } */
+        /* h1, h2 { margin-top: 0; } */
+
+        /* --- Responsive Design for Mobile --- */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column; /* Stack elements vertically */
+                height: auto; /* Allow body to grow */
+                overflow: auto; /* Allow scrolling if needed */
+            }
+
+            #controls-panel {
+                width: 100%; /* Full width */
+                height: auto; /* Adjust height based on content */
+                max-height: 50vh; /* Limit height to 50% of viewport */
+                border-right: none; /* Remove side border */
+                border-top: 1px solid var(--border-color); /* Add top border */
+                order: 2; /* Place controls below visualization */
+                padding: 15px;
+            }
+
+            #visualization-area {
+                width: 100%;
+                height: 60vh; /* Allocate more height to visualization */
+                min-height: 300px; /* Ensure minimum drawing space */
+                order: 1; /* Place visualization above controls */
+                padding: 10px;
+            }
+
+            #canvas-container {
+                width: 100%; /* Canvas container takes full width */
+                height: calc(100% - 30px); /* Fill most of visualization area, leave space */
+            }
+
+            /* Adjust metrics display for smaller screens */
+            .metrics-display {
+                flex-direction: column; /* Stack metrics */
+                align-items: flex-start; /* Align to left */
+                left: 10px; /* Position near left */
+                transform: translateX(0); /* Reset horizontal centering */
+                gap: 5px; /* Reduce gap */
+            }
+            .metric-badge {
+                min-width: 140px; /* Slightly smaller badges */
+                padding: 4px 8px;
+            }
+            .metric-badge-label, .metric-badge-value {
+                font-size: 0.9em;
+            }
+
+             /* Adjust scale bar for smaller screens */
+             #scale-bar-container {
+                 bottom: 10px; /* Move to bottom */
+                 top: auto; /* Remove top positioning */
+                 right: 10px;
+                 font-size: 10px; /* Even smaller font */
+             }
+
+             h1 { font-size: 1.5em; }
+             h2 { font-size: 1.2em; }
+
+             .description {
+                 margin-top: 15px; /* Add margin back */
+             }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Controls Panel (Left) -->
+    <div id="controls-panel">
+        <h1><i class="fas fa-fish"></i> ლაყუჩების სიმულაცია</h1>
+
+        <!-- View Toggles -->
+        <div class="view-toggle-container">
+            <h2>ხედვის რეჟიმი</h2>
+            <div class="view-toggle">
+                <button id="microscope-view" class="active"><i class="fas fa-microscope"></i> მიკროსკოპული</button>
+                <button id="particle-view"><i class="fas fa-cogs"></i> ფუნქციონალური ხედი</button>
+            </div>
+             <!-- Particle Toggles (Initially Hidden) -->
+            <div class="view-toggle" id="particle-toggle-container" style="display: none; margin-top: 10px;">
+                 <button id="toggle-oxygen" class="particle-button active">O₂ ნაწილაკები</button>
+                 <button id="toggle-co2" class="particle-button">CO₂ ნაწილაკები</button>
+                 <button id="toggle-vessels" class="particle-button active"><i class="fas fa-water"></i> სისხლძარღვები</button>
+            </div>
+        </div>
+
+        <!-- Simulation Controls -->
+        <div class="control-group">
+             <label for="lamellae-slider">
+                 <i class="fas fa-layer-group"></i> ლამელების სიმკვრივე
+            </label>
+            <div id="value-display-container" style="display: flex; justify-content: space-between; align-items: center; margin: 5px 0;">
+                 <span>დაბალი</span>
+                 <span id="lamellae-value" style="font-weight: bold;">50</span>
+                 <span>მაღალი</span>
+             </div>
+            <input type="range" id="lamellae-slider" name="lamellae" min="10" max="100" value="50">
+        </div>
+
+        <!-- Description -->
+        <div class="description">
+            <p>დაარეგულირეთ ლამელების სიმკვრივე და შეცვალეთ ხედები ლაყუჩის სტრუქტურისა და ჟანგბადის შეწოვის დასაკვირვებლად.</p>
+        </div>
+    </div>
+
+    <!-- Visualization Area (Right) -->
+    <div id="visualization-area">
+        <div id="canvas-container">
+            <canvas id="simulation-canvas"></canvas>
+            <!-- Moved Scale Bar Inside Canvas Container -->
+            <div id="scale-bar-container">
+                <div id="scale-bar" style="width: 50px;"></div> 
+                <span id="scale-text">500 µm</span> 
+            </div>
+        </div>
+        <!-- Removed Scale Bar from outside canvas container -->
+        <!-- 
+        <div id="scale-bar-container">
+            <div id="scale-bar" style="width: 50px;"></div> 
+            <span id="scale-text">500 µm</span> 
+        </div> 
+        -->
+
+        <!-- Metrics Display (Copied style from index_simple) -->
+        <div class="metrics-display">
+            <div class="metric-badge">
+                <span class="metric-badge-label">ზედაპირის ფართობი:</span>
+                <span id="surface-area" class="metric-badge-value">--</span>
+                <!-- Removed units span for cleaner look, could add back if needed -->
+            </div>
+            <div class="metric-badge">
+                <span class="metric-badge-label">O₂ შთანთქმის სიჩქარე:</span>
+                <span id="oxygen-uptake" class="metric-badge-value">--</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Base Requirements JavaScript --- 
+
+        // --- DOM Elements ---
+        const canvas = document.getElementById('simulation-canvas');
+        const ctx = canvas.getContext('2d');
+        const canvasContainer = document.getElementById('canvas-container');
+
+        const microscopeViewBtn = document.getElementById('microscope-view');
+        const particleViewBtn = document.getElementById('particle-view');
+        const particleToggleContainer = document.getElementById('particle-toggle-container');
+        const toggleOxygenBtn = document.getElementById('toggle-oxygen');
+        const toggleCO2Btn = document.getElementById('toggle-co2'); // CO2 button element
+        const toggleVesselsBtn = document.getElementById('toggle-vessels'); // New button element
+
+        const lamellaeSlider = document.getElementById('lamellae-slider');
+        const lamellaeValueDisplay = document.getElementById('lamellae-value');
+        const surfaceAreaDisplay = document.getElementById('surface-area');
+        const oxygenUptakeDisplay = document.getElementById('oxygen-uptake');
+
+        const scaleBarElement = document.getElementById('scale-bar');
+        const scaleTextElement = document.getElementById('scale-text');
+
+        // --- Utility: Get CSS Variable ---
+        function getCssVariable(varName) {
+            // Default value included to prevent errors if CSS fails to load
+            return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || '#000000';
+        }
+
+        // --- Simulation State ---
+        let currentView = 'microscope'; // 'microscope' or 'particle'
+        let lamellaeDensity = parseInt(lamellaeSlider.value); // Initial value from slider
+        let simulationData = {
+            surfaceArea: 0,
+            oxygenUptakeRate: 0,
+        };
+        let particleVisibility = {
+            oxygen: true, // Oxygen particles visible by default when particle view is active
+            co2: false, // CO2 particles initially hidden
+            vessels: true // Vessels visible by default
+        };
+        let oxygenParticles = [];
+        let carbonDioxideParticles = []; // Array for CO2 particles
+        const FILAMENT_STRUCTURE = []; // Stores calculated geometry for particle collision
+        let currentPixelsPerMicron = 1.0; // Will be calculated in resizeCanvas
+        let lastTimestamp = 0;
+
+        // --- Constants ---
+        // Dimensions (Microns)
+        const FILAMENT_WIDTH_MICRONS = 60;
+        const LAMELLA_WIDTH_MICRONS = 70;       // Width protruding from filament
+        const LAMELLA_THICKNESS_MICRONS = 20;    // Thickness of the lamella plate (CHANGED from 5)
+        const FILAMENT_SPACING_MICRONS = 250;   // Center-to-center
+        const TARGET_FILAMENT_LENGTH_MICRONS = 1000; // 1mm = 1000µm
+        const GILL_ARCH_THICKNESS_MICRONS = 400; // Changed from 150
+
+        // Scaling & View
+        const MICROSCOPE_SCALE_VALUE = 500; // µm represented by scale bar
+        const PARTICLE_SCALE_VALUE = 500;   // µm represented by scale bar
+        const BASE_PIXELS_PER_MICRON_MICROSCOPE = 0.25; // Zoomed out (was 0.5)
+        const BASE_PIXELS_PER_MICRON_PARTICLE = 0.25; // Zoomed out (was 0.5)
+        const BASE_CANVAS_WIDTH_FOR_SCALING = 800; // Reference width for scaling pixels/micron
+
+        // Particle Simulation
+        const MAX_OXYGEN_PARTICLES = 60;
+        const OXYGEN_PARTICLE_RADIUS = 5;
+        const WATER_FLOW_SPEED_Y = -0.8; // Negative for upward flow
+        const WATER_FLOW_JITTER_MAIN = 0.3; // Jitter in the main (Y) direction
+        const WATER_FLOW_JITTER_SIDE = 0.4; // Jitter in the side (X) direction
+        const BASE_ABSORPTION_RATE = 0.01; // Max 1% chance 
+        const BASE_CO2_SPAWN_CHANCE = 0.00125; // Base chance per lamella per frame (Reduced further by 50%)
+
+        // Colors (Fetched from CSS Variables)
+        const COLOR_MICRO_FILAMENT = getCssVariable('--micro-filament-color');
+        const COLOR_MICRO_LAMELLA = getCssVariable('--micro-lamella-color');
+        const COLOR_MICRO_TINT = getCssVariable('--micro-tint-color'); // For overlay tint
+        const COLOR_PARTICLE_FILAMENT = getCssVariable('--particle-filament-color');
+        const COLOR_PARTICLE_LAMELLA = getCssVariable('--particle-lamella-color');
+        const COLOR_ARTERY = getCssVariable('--artery-color');
+        const COLOR_VEIN = getCssVariable('--vein-color');
+        const COLOR_OXYGEN_PARTICLE = getCssVariable('--oxygen-particle-color');
+        const COLOR_OXYGEN_TEXT = getCssVariable('--oxygen-text-color');
+        const COLOR_CO2_PARTICLE = '#000000'; // Black
+        const COLOR_CO2_TEXT = '#FFFFFF'; // White
+        const COLOR_ARCH_BONE = getCssVariable('--arch-bone-color');
+        const COLOR_MICRO_BG = getCssVariable('--micro-bg');
+        const COLOR_PARTICLE_BG = getCssVariable('--particle-bg');
+
+        // --- Core Functions ---
+
+        function resizeCanvas() {
+            console.log("Resizing canvas...");
+            const containerWidth = canvasContainer.clientWidth;
+            const containerHeight = canvasContainer.clientHeight;
+            // Simple approach: Use container size directly, max constraints handled by CSS
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = containerWidth * dpr;
+            canvas.height = containerHeight * dpr;
+            canvas.style.width = `${containerWidth}px`;
+            canvas.style.height = `${containerHeight}px`;
+            ctx.scale(dpr, dpr); // Scale context for HiDPI displays
+
+            // Recalculate scale & redraw
+            updateScaleBar();
+            if(currentView === 'particle') {
+                generateFilamentStructureParticle(); // Regenerate collision structure
+            }
+            drawScene();
+        }
+
+        function updateScaleBar() {
+            const scaleValueMicrons = currentView === 'microscope' ? MICROSCOPE_SCALE_VALUE : PARTICLE_SCALE_VALUE;
+            // Calculate current pixels per micron based on view and canvas size
+            const basePixelsPerMicron = currentView === 'microscope' ? BASE_PIXELS_PER_MICRON_MICROSCOPE : BASE_PIXELS_PER_MICRON_PARTICLE;
+            // Use logical canvas width (CSS pixels) for scaling factor calculation
+            currentPixelsPerMicron = basePixelsPerMicron * (canvas.clientWidth / BASE_CANVAS_WIDTH_FOR_SCALING);
+
+            let scaleBarLengthPixels = scaleValueMicrons * currentPixelsPerMicron;
+            // Clamp scale bar length
+            scaleBarLengthPixels = Math.max(30, Math.min(canvas.clientWidth * 0.25, scaleBarLengthPixels));
+
+            scaleBarElement.style.width = `${scaleBarLengthPixels}px`;
+            scaleTextElement.textContent = `${scaleValueMicrons} µm`;
+            console.log(`Scale updated: ${currentPixelsPerMicron.toFixed(2)} px/µm`);
+        }
+
+        function calculateMetrics() {
+            console.log("Calculating metrics...");
+            // Density factor (0-1 based on slider)
+            const densityFactor = (lamellaeDensity - 10) / (100 - 10);
+            
+            // Surface Area: Base + linear scaling with density
+            // Keep this model, assuming it represents the linear increase
+            simulationData.surfaceArea = 500 + 2000 * densityFactor; 
+            
+            // O2 Uptake Rate: Simple linear scale (0-100) based on density factor
+            simulationData.oxygenUptakeRate = densityFactor * 100;
+
+            surfaceAreaDisplay.textContent = simulationData.surfaceArea.toFixed(0);
+            // Display uptake rate with perhaps one decimal place
+            oxygenUptakeDisplay.textContent = simulationData.oxygenUptakeRate.toFixed(1);
+        }
+
+        function drawScene() {
+            if (!ctx) return;
+            // console.log(`Drawing scene for view: ${currentView}`);
+
+            ctx.save(); // Save default context state
+            // Use logical canvas width/height for drawing bounds after scaling context
+            const logicalWidth = canvas.clientWidth;
+            const logicalHeight = canvas.clientHeight;
+
+            // Apply background based on view
+            ctx.fillStyle = (currentView === 'microscope') ? COLOR_MICRO_BG : COLOR_PARTICLE_BG;
+            ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+
+            if (currentView === 'microscope') {
+                drawMicroscopeView();
+            } else {
+                console.log("[drawScene] Selecting Particle View");
+                // Call generate structure if needed BEFORE drawing anything in particle view
+                if (FILAMENT_STRUCTURE.length === 0) {
+                    console.log("[drawScene] Generating particle structure as it was empty.");
+                    generateFilamentStructureParticle();
+                }
+                drawParticleSimulationView(); 
+                // Draw particles was moved *inside* drawParticleSimulationView
+            }
+            ctx.restore(); // Restore context state
+            // Scale bar is HTML/CSS, updated in updateScaleBar
+        }
+
+        function animate(timestamp) {
+            const deltaTime = timestamp - lastTimestamp;
+            lastTimestamp = timestamp;
+
+            // Only update particles if in particle view and they are visible
+            if (currentView === 'particle' && particleVisibility.oxygen) { 
+                 updateParticles(deltaTime);
+            }
+            if (currentView === 'particle' && particleVisibility.co2) {
+                updateCO2Particles(deltaTime); // Update CO2 particles
+                handleCO2Spawning(); // Handle spawning new CO2 particles
+            }
+
+            drawScene();
+            requestAnimationFrame(animate);
+        }
+
+        function setupEventListeners() {
+            console.log("Setting up event listeners...");
+            window.addEventListener('resize', resizeCanvas);
+
+            // View Toggles
+            microscopeViewBtn.addEventListener('click', () => {
+                if (currentView === 'microscope') return;
+                console.log("Switching to Microscope view");
+                currentView = 'microscope';
+                microscopeViewBtn.classList.add('active');
+                particleViewBtn.classList.remove('active');
+                particleToggleContainer.style.display = 'none';
+                resizeCanvas(); // Recalculate scale and redraw for the new view
+            });
+
+            particleViewBtn.addEventListener('click', () => {
+                 if (currentView === 'particle') return;
+                 console.log("Switching to Particle view");
+                 currentView = 'particle';
+                 particleViewBtn.classList.add('active');
+                 microscopeViewBtn.classList.remove('active');
+                 particleToggleContainer.style.display = 'flex';
+                 generateFilamentStructureParticle(); // Ensure structure is ready
+                 if (particleVisibility.oxygen && oxygenParticles.length === 0) {
+                    initParticles(); // Initialize particles if needed
+                 }
+                 resizeCanvas(); // Recalculate scale and redraw
+            });
+
+             // Particle Toggle
+             toggleOxygenBtn.addEventListener('click', () => {
+                 particleVisibility.oxygen = !particleVisibility.oxygen;
+                 toggleOxygenBtn.classList.toggle('active');
+                 console.log(`O₂ ნაწილაკები შეცვალილია: ${particleVisibility.oxygen}`);
+                 if (!particleVisibility.oxygen) {
+                     oxygenParticles = []; // Clear particles
+                 } else if (currentView === 'particle' && oxygenParticles.length === 0) {
+                     initParticles(); // Respawn if needed
+                 }
+                 // No redraw needed here, animation loop handles it
+             });
+
+             // CO2 Toggle
+             toggleCO2Btn.addEventListener('click', () => {
+                 particleVisibility.co2 = !particleVisibility.co2;
+                 toggleCO2Btn.classList.toggle('active');
+                 console.log(`CO₂ ნაწილაკები შეცვალილია: ${particleVisibility.co2}`);
+                 if (!particleVisibility.co2) {
+                     carbonDioxideParticles = []; // Clear CO2 particles
+                 }
+                 // No redraw needed
+             });
+
+             // Vessel Toggle - Verify this listener is correct
+             console.log("[setupEventListeners] Attaching listener to toggleVesselsBtn");
+             toggleVesselsBtn.addEventListener('click', () => {
+                 console.log("[toggleVesselsBtn Click] Fired!");
+                 console.log(` -> Before toggle: particleVisibility.vessels = ${particleVisibility.vessels}`);
+                  particleVisibility.vessels = !particleVisibility.vessels;
+                  toggleVesselsBtn.classList.toggle('active');
+                  console.log(`სისხლძარღვები შეცვალილია: ${particleVisibility.vessels}`);
+                  console.log(` -> After toggle: particleVisibility.vessels = ${particleVisibility.vessels}`);
+                  // No redraw needed, animation loop handles it
+              });
+
+            // Lamellae Slider
+            lamellaeSlider.addEventListener('input', () => {
+                lamellaeDensity = parseInt(lamellaeSlider.value);
+                lamellaeValueDisplay.textContent = lamellaeDensity;
+                calculateMetrics();
+                 if(currentView === 'particle') {
+                     generateFilamentStructureParticle(); // Structure depends on density for lamellae count
+                 }
+                 // No redraw needed here, animation loop handles it
+            });
+        }
+
+        // --- Helper: Draw Rounded Rectangle ---
+        function drawRoundedRect(ctx, x, y, width, height, radius) {
+            if (width < 2 * radius) radius = width / 2;
+            if (height < 2 * radius) radius = height / 2;
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.arcTo(x + width, y, x + width, y + height, radius);
+            ctx.arcTo(x + width, y + height, x, y + height, radius);
+            ctx.arcTo(x, y + height, x, y, radius);
+            ctx.arcTo(x, y, x + width, y, radius);
+            ctx.closePath();
+            ctx.fill(); // Assuming fill is desired
+        }
+
+        // --- Drawing Functions ---
+        function drawMicroscopeView() {
+            const logicalWidth = canvas.clientWidth;
+            const logicalHeight = canvas.clientHeight;
+
+            // --- Pre-calculate Colors & Styles ---
+            const microFilamentBase = COLOR_MICRO_FILAMENT; // Already rgba
+            const microLamellaBase = COLOR_MICRO_LAMELLA;   // Already rgba
+            // Create slightly darker versions for outlines (assuming rgba input)
+            function darkerRgba(rgba, factor = 0.7) {
+                const parts = rgba.match(/(\d+(\.\d+)?)/g);
+                if (!parts || parts.length < 3) return rgba; // Safety check
+                const r = Math.max(0, Math.floor(parseInt(parts[0]) * factor));
+                const g = Math.max(0, Math.floor(parseInt(parts[1]) * factor));
+                const b = Math.max(0, Math.floor(parseInt(parts[2]) * factor));
+                const a = parts.length > 3 ? parseFloat(parts[3]) : 1; // Keep original alpha for base, maybe reduce for outline?
+                return `rgba(${r}, ${g}, ${b}, ${a * 0.8})`; // Slightly reduce outline alpha too
+            }
+            const microFilamentOutline = darkerRgba(microFilamentBase);
+            const microLamellaOutline = darkerRgba(microLamellaBase);
+            const microLamellaDetail = darkerRgba(microLamellaBase, 0.85); // Even subtler for internal lines
+
+            const outlineWidth = 0.5; // Thin outline
+            const detailLineWidth = 0.3;
+            // --- End Pre-calculate ---
+
+            // Calculate dimensions in pixels
+            const filamentWidthPx = FILAMENT_WIDTH_MICRONS * currentPixelsPerMicron;
+            const filamentSpacingPx = FILAMENT_SPACING_MICRONS * currentPixelsPerMicron;
+            const filamentLengthPx = Math.min(logicalHeight * 0.8, TARGET_FILAMENT_LENGTH_MICRONS * currentPixelsPerMicron);
+            const lamellaWidthPx = LAMELLA_WIDTH_MICRONS * currentPixelsPerMicron;
+            const lamellaThicknessPx = Math.max(1, LAMELLA_THICKNESS_MICRONS * currentPixelsPerMicron);
+            const archThicknessPx = GILL_ARCH_THICKNESS_MICRONS * currentPixelsPerMicron;
+            const newCapRadius = (filamentWidthPx + 2 * lamellaWidthPx) / 2;
+
+            // Calculate layout
+            const numFilaments = Math.floor((logicalWidth - filamentWidthPx) / filamentSpacingPx) + 1;
+            const totalFilamentWidth = (numFilaments -1) * filamentSpacingPx + filamentWidthPx;
+            const startX = (logicalWidth - totalFilamentWidth) / 2;
+            const archY = logicalHeight - archThicknessPx * 0.6;
+            const filamentBaseY = archY - archThicknessPx * 0.4;
+            const filamentTopY = filamentBaseY - filamentLengthPx;
+            const filamentBodyTopY = filamentTopY + newCapRadius;
+            const filamentBodyLength = filamentLengthPx - newCapRadius;
+
+            // Lamellae counts/spacing
+            const minLamellae = 5;
+            const maxLamellae = 25;
+            const numLamellaePerSide = Math.round(minLamellae + ((lamellaeDensity - 10) / 90) * (maxLamellae - minLamellae));
+            const lamellaSpacingPx = filamentBodyLength / (numLamellaePerSide + 1);
+
+            // --- Drawing Order --- 
+
+            // 1. Draw Gill Arch (at the bottom)
+            ctx.strokeStyle = '#555555'; // Dark Opaque Grey for Micro View
+            ctx.lineWidth = archThicknessPx;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(startX - filamentSpacingPx * 0.5, archY);
+            ctx.lineTo(startX + totalFilamentWidth + filamentSpacingPx * 0.5, archY);
+            ctx.stroke();
+            ctx.lineCap = 'butt';
+
+            // --- Create Filament Gradient --- (Subtle vertical gradient)
+            const filamentGradient = ctx.createLinearGradient(0, filamentTopY, 0, filamentBaseY);
+            // Add color stops (example: slightly lighter in middle/top, base color at bottom)
+            // This requires a non-rgba base color to easily lighten. Let's parse the rgba.
+            const filamentRgbParts = microFilamentBase.match(/(\d+(\.\d+)?)/g);
+            let filamentBaseColor = `rgb(${filamentRgbParts[0]}, ${filamentRgbParts[1]}, ${filamentRgbParts[2]})`;
+            let filamentLighterColor = `rgb(${Math.min(255, parseInt(filamentRgbParts[0]) + 20)}, ${Math.min(255, parseInt(filamentRgbParts[1]) + 20)}, ${Math.min(255, parseInt(filamentRgbParts[2]) + 20)})`;
+            const filamentAlpha = filamentRgbParts.length > 3 ? parseFloat(filamentRgbParts[3]) : 0.7; // Default alpha from CSS var
+            
+            filamentGradient.addColorStop(0, `rgba(${filamentRgbParts[0]}, ${filamentRgbParts[1]}, ${filamentRgbParts[2]}, ${filamentAlpha * 0.8})`); // Slightly lighter alpha at top
+            filamentGradient.addColorStop(0.5, `rgba(${filamentRgbParts[0]}, ${filamentRgbParts[1]}, ${filamentRgbParts[2]}, ${filamentAlpha * 1.1})`); // Slightly more opaque in middle?
+            filamentGradient.addColorStop(1, `rgba(${filamentRgbParts[0]}, ${filamentRgbParts[1]}, ${filamentRgbParts[2]}, ${filamentAlpha})`); // Original alpha at base
+            // --- End Gradient --- 
+
+            // 2. Draw Filaments and Lamellae (extending UP)
+            for (let i = 0; i < numFilaments; i++) {
+                const filamentX = startX + i * filamentSpacingPx;
+                const filamentBodyCenterX = filamentX + filamentWidthPx / 2;
+
+                // 2a. Draw Lamellae (first, so filament overlaps)
+                ctx.fillStyle = microLamellaBase;
+                ctx.strokeStyle = microLamellaOutline;
+                ctx.lineWidth = outlineWidth;
+                for (let j = 1; j <= numLamellaePerSide; j++) {
+                    const lamellaY = filamentBodyTopY + j * lamellaSpacingPx - (lamellaThicknessPx / 2);
+                    // Left side
+                    ctx.fillRect(filamentX - lamellaWidthPx, lamellaY, lamellaWidthPx, lamellaThicknessPx);
+                    ctx.strokeRect(filamentX - lamellaWidthPx, lamellaY, lamellaWidthPx, lamellaThicknessPx);
+                    // Right side
+                    ctx.fillRect(filamentX + filamentWidthPx, lamellaY, lamellaWidthPx, lamellaThicknessPx);
+                    ctx.strokeRect(filamentX + filamentWidthPx, lamellaY, lamellaWidthPx, lamellaThicknessPx);
+
+                    // Add faint internal lines (e.g., 2 lines)
+                    ctx.strokeStyle = microLamellaDetail;
+                    ctx.lineWidth = detailLineWidth;
+                    const detailY1 = lamellaY + lamellaThicknessPx * 0.33;
+                    const detailY2 = lamellaY + lamellaThicknessPx * 0.66;
+                    // Left
+                    ctx.beginPath();
+                    ctx.moveTo(filamentX - lamellaWidthPx, detailY1);
+                    ctx.lineTo(filamentX, detailY1);
+                    ctx.moveTo(filamentX - lamellaWidthPx, detailY2);
+                    ctx.lineTo(filamentX, detailY2);
+                    ctx.stroke();
+                    // Right
+                     ctx.beginPath();
+                     ctx.moveTo(filamentX + filamentWidthPx, detailY1);
+                     ctx.lineTo(filamentX + filamentWidthPx + lamellaWidthPx, detailY1);
+                     ctx.moveTo(filamentX + filamentWidthPx, detailY2);
+                     ctx.lineTo(filamentX + filamentWidthPx + lamellaWidthPx, detailY2);
+                     ctx.stroke();
+                }
+
+                 // 2b. Draw Filament Body (Rectangle using gradient)
+                ctx.fillStyle = filamentGradient; 
+                ctx.strokeStyle = microFilamentOutline;
+                ctx.lineWidth = outlineWidth;
+                ctx.fillRect(filamentX, filamentBodyTopY, filamentWidthPx, filamentBodyLength);
+                ctx.strokeRect(filamentX, filamentBodyTopY, filamentWidthPx, filamentBodyLength);
+
+                 // 2c. Draw Filament Bullet Cap (using gradient)
+                 ctx.fillStyle = filamentGradient; // Use same gradient for cap
+                 ctx.strokeStyle = microFilamentOutline;
+                 ctx.lineWidth = outlineWidth;
+                 ctx.beginPath();
+                 ctx.arc(filamentBodyCenterX, filamentBodyTopY, newCapRadius, Math.PI, 0);
+                 // Need to manually draw the bottom line for strokeRect effect on arc
+                 ctx.lineTo(filamentBodyCenterX + newCapRadius, filamentBodyTopY); 
+                 ctx.fill();
+                 // Stroke the arc and the closing line separately?
+                 ctx.beginPath(); // Start new path for stroke
+                 ctx.arc(filamentBodyCenterX, filamentBodyTopY, newCapRadius, Math.PI, 0);
+                 ctx.closePath(); // Close path for stroke to include bottom line
+                 ctx.stroke();
+
+                 // 2d. Artery/Vein code remains commented out here
+                 /* ... */
+            }
+
+             // 3. Apply overall tint
+             ctx.globalAlpha = 0.15;
+             ctx.fillStyle = getCssVariable('--micro-tint-color').replace('rgba', 'rgb').replace(/, [0-9.]+\)/,')');
+             ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+             ctx.globalAlpha = 1.0;
+
+            // 4. Apply Vignette Effect
+            const centerX = logicalWidth / 2;
+            const centerY = logicalHeight / 2;
+            // Outer radius should cover the corners
+            const outerRadius = Math.sqrt(centerX*centerX + centerY*centerY);
+            // Inner radius defines the size of the clear center area (adjust percentage as needed)
+            const innerRadius = outerRadius * 0.6;
+            
+            const vignetteGradient = ctx.createRadialGradient(centerX, centerY, innerRadius, centerX, centerY, outerRadius);
+            vignetteGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');    // Center is transparent
+            vignetteGradient.addColorStop(0.8, 'rgba(0, 0, 0, 0)');  // Stay transparent further out
+            vignetteGradient.addColorStop(1, 'rgba(0, 0, 0, 0.4)'); // Fade to semi-transparent black at edge
+            
+            ctx.fillStyle = vignetteGradient;
+            ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+        }
+
+        function drawParticleSimulationView() {
+            console.log("[drawParticleSimulationView] Entered");
+            const logicalWidth = canvas.clientWidth;
+            const logicalHeight = canvas.clientHeight;
+
+            // --- DRAW PARTICLES FIRST (BEHIND STRUCTURE) ---
+            console.log("[drawParticleSimulationView] Drawing particles first...");
+            if (particleVisibility.oxygen) {
+                drawParticles();
+            }
+            if (particleVisibility.co2) {
+                drawCO2Particles(); // Draw CO2 particles behind structure
+            }
+            // --- END DRAW PARTICLES FIRST ---
+
+            // 1. Draw Gill Arch (at the bottom)
+            const filamentWidthPx = FILAMENT_WIDTH_MICRONS * currentPixelsPerMicron;
+            const filamentSpacingPx = FILAMENT_SPACING_MICRONS * currentPixelsPerMicron;
+            const archThicknessPx = GILL_ARCH_THICKNESS_MICRONS * currentPixelsPerMicron;
+            const numFilaments = Math.floor((logicalWidth - filamentWidthPx) / filamentSpacingPx) + 1;
+            const totalFilamentWidth = (numFilaments -1) * filamentSpacingPx + filamentWidthPx;
+            const startX = (logicalWidth - totalFilamentWidth) / 2;
+            const archY = logicalHeight - archThicknessPx * 0.6;
+            const archStartX = startX - filamentSpacingPx * 0.5; // Arch visual start X
+            const archEndX = startX + totalFilamentWidth + filamentSpacingPx * 0.5; // Arch visual end X
+
+            // 1a. Draw Pink Arch Base for Particle View
+            console.log("[drawParticleSimulationView] Drawing arch base...");
+            ctx.strokeStyle = COLOR_PARTICLE_LAMELLA; // Use Creme-Pink
+            ctx.lineWidth = archThicknessPx;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(archStartX, archY);
+            ctx.lineTo(archEndX, archY);
+            ctx.stroke();
+            ctx.lineCap = 'butt';
+
+            // 1b. Draw Vessels within the Arch - ALWAYS DRAW (will be covered later if toggled off)
+            const archVesselLineWidth = archThicknessPx * 0.2; 
+            ctx.lineWidth = Math.max(1, archVesselLineWidth); 
+            const archArteryY = archY - archThicknessPx * 0.15;
+            ctx.strokeStyle = COLOR_ARTERY;
+            ctx.beginPath();
+            ctx.moveTo(archStartX, archArteryY);
+            ctx.lineTo(archEndX, archArteryY);
+            ctx.stroke();
+            const archVeinY = archY + archThicknessPx * 0.15;
+            ctx.strokeStyle = COLOR_VEIN;
+            ctx.beginPath();
+            ctx.moveTo(archStartX, archVeinY);
+            ctx.lineTo(archEndX, archVeinY);
+            ctx.stroke();
+            // End Always Draw Arch Vessels
+
+            // 2. Draw structure from FILAMENT_STRUCTURE (includes new cap size)
+            console.log("[drawParticleSimulationView] Iterating FILAMENT_STRUCTURE...");
+            FILAMENT_STRUCTURE.forEach(element => {
+                // console.log(`  -> Processing element type: ${element.type}`); // Uncomment if needed, might be too verbose
+                if (element.type === 'filament_body') {
+                    ctx.fillStyle = COLOR_PARTICLE_FILAMENT;
+                    ctx.fillRect(element.x, element.y, element.width, element.height);
+
+                    // Draw Artery/Vein inside this body (extending UP from arch vessels)
+                    console.log(`[drawParticleSimulationView] Checking filament vessels. Visible: ${particleVisibility.vessels}`);
+                    if (particleVisibility.vessels) {
+                        console.log("  -> Drawing filament vessels.");
+                        const vesselOffset = element.width * 0.2;
+                        ctx.lineWidth = Math.max(1, element.width * 0.1);
+                        
+                        // Artery (Red) - Connects to archArteryY
+                        ctx.strokeStyle = COLOR_ARTERY;
+                        ctx.beginPath();
+                        ctx.moveTo(element.x + vesselOffset, archArteryY); // Start at arch vessel Y
+                        ctx.lineTo(element.x + vesselOffset, element.y);   // End at top of body
+                        ctx.stroke();
+                        
+                        // Vein (Blue) - Connects to archVeinY
+                        ctx.strokeStyle = COLOR_VEIN;
+                        ctx.beginPath();
+                        ctx.moveTo(element.x + element.width - vesselOffset, archVeinY); // Start at arch vessel Y
+                        ctx.lineTo(element.x + element.width - vesselOffset, element.y);   // End at top of body
+                        ctx.stroke();
+                    } else {
+                        // If vessels are toggled OFF, draw over the ARCH vessels with arch color
+                        console.log(" -> Covering arch vessels.");
+                        ctx.lineWidth = Math.max(1, archVesselLineWidth); // Use same width as original vessels
+                        ctx.strokeStyle = COLOR_PARTICLE_LAMELLA; // Arch color
+                        // Cover Artery
+                        ctx.beginPath();
+                        ctx.moveTo(archStartX, archArteryY);
+                        ctx.lineTo(archEndX, archArteryY);
+                        ctx.stroke();
+                        // Cover Vein
+                        ctx.beginPath();
+                        ctx.moveTo(archStartX, archVeinY);
+                        ctx.lineTo(archEndX, archVeinY);
+                        ctx.stroke();
+                    }
+
+                } else if (element.type === 'filament_cap') {
+                    ctx.fillStyle = COLOR_PARTICLE_FILAMENT;
+                    ctx.beginPath();
+                    ctx.arc(element.x, element.y, element.radius, Math.PI, 0);
+                    ctx.fill();
+                } else if (element.type === 'lamella') {
+                    ctx.fillStyle = COLOR_PARTICLE_LAMELLA;
+                    ctx.fillRect(element.x, element.y, element.width, element.height);
+                }
+            });
+        }
+
+        function generateFilamentStructureParticle() {
+            console.log("Generating filament structure for particle view (FLIPPED, WIDER CAP)...");
+            FILAMENT_STRUCTURE.length = 0; // Clear existing
+            const logicalWidth = canvas.clientWidth;
+            const logicalHeight = canvas.clientHeight;
+
+            const particlePixelsPerMicron = BASE_PIXELS_PER_MICRON_PARTICLE * (logicalWidth / BASE_CANVAS_WIDTH_FOR_SCALING);
+
+            // Calculate dimensions in pixels using PARTICLE scale
+            const filamentWidthPx = FILAMENT_WIDTH_MICRONS * particlePixelsPerMicron;
+            const filamentSpacingPx = FILAMENT_SPACING_MICRONS * particlePixelsPerMicron;
+            const filamentLengthPx = Math.min(logicalHeight * 0.8, TARGET_FILAMENT_LENGTH_MICRONS * particlePixelsPerMicron);
+            const lamellaWidthPx = LAMELLA_WIDTH_MICRONS * particlePixelsPerMicron;
+            const lamellaThicknessPx = Math.max(1, LAMELLA_THICKNESS_MICRONS * particlePixelsPerMicron); // Uses updated constant
+            const archThicknessPx = GILL_ARCH_THICKNESS_MICRONS * particlePixelsPerMicron;
+
+            // --- Cap Width Adjustment --- 
+            const newCapRadiusPx = (filamentWidthPx + 2 * lamellaWidthPx) / 2;
+            // --- End Cap Width Adjustment ---
+
+            // Calculate layout (same logic as drawing, but using particle scale)
+            const numFilaments = Math.floor((logicalWidth - filamentWidthPx) / filamentSpacingPx) + 1;
+            const totalFilamentWidth = (numFilaments -1) * filamentSpacingPx + filamentWidthPx;
+            const startX = (logicalWidth - totalFilamentWidth) / 2;
+
+            // --- FLIPPED ORIENTATION (Adjusted for new cap radius) ---
+            const archY = logicalHeight - archThicknessPx * 0.6; 
+            const filamentBaseY = archY - archThicknessPx * 0.4; 
+            const filamentTopY = filamentBaseY - filamentLengthPx;
+            const filamentBodyTopY = filamentTopY + newCapRadiusPx;
+            const filamentBodyLength = filamentLengthPx - newCapRadiusPx;
+            // --- END FLIPPED --- 
+
+            const minLamellae = 5;
+            const maxLamellae = 25;
+            const numLamellaePerSide = Math.round(minLamellae + ((lamellaeDensity - 10) / 90) * (maxLamellae - minLamellae));
+            // Lamellae spacing is along the *body* length
+            const lamellaSpacingPx = filamentBodyLength / (numLamellaePerSide + 1);
+
+            // Generate structure objects (with flipped Y coords and wider cap)
+            for (let i = 0; i < numFilaments; i++) {
+                const filamentX = startX + i * filamentSpacingPx;
+                const filamentBodyCenterX = filamentX + filamentWidthPx / 2;
+                
+                // Filament Body Bounding Box
+                FILAMENT_STRUCTURE.push({
+                    type: 'filament_body',
+                    x: filamentX,
+                    y: filamentBodyTopY, // Uses adjusted Y
+                    width: filamentWidthPx,
+                    height: filamentBodyLength // Uses adjusted length
+                });
+
+                // Filament Cap Bounding Info (using new radius and center)
+                FILAMENT_STRUCTURE.push({
+                    type: 'filament_cap',
+                    x: filamentBodyCenterX, // Center X relative to body
+                    y: filamentBodyTopY,    // Center Y is top of body
+                    radius: newCapRadiusPx  // Use the new wider radius
+                });
+
+                // Lamellae Bounding Boxes
+                for (let j = 1; j <= numLamellaePerSide; j++) {
+                    // Calculate Y position starting from the TOP of the body and going DOWN
+                    const lamellaBaseY = filamentBodyTopY + j * lamellaSpacingPx;
+                    const lamellaActualY = lamellaBaseY - (lamellaThicknessPx / 2);
+                    // Left side
+                    FILAMENT_STRUCTURE.push({
+                        type: 'lamella',
+                        x: filamentX - lamellaWidthPx,
+                        y: lamellaActualY,
+                        width: lamellaWidthPx,
+                        height: lamellaThicknessPx,
+                        side: 'left'
+                    });
+                    // Right side
+                    FILAMENT_STRUCTURE.push({
+                        type: 'lamella',
+                        x: filamentX + filamentWidthPx,
+                        y: lamellaActualY,
+                        width: lamellaWidthPx,
+                        height: lamellaThicknessPx,
+                        side: 'right'
+                    });
+                }
+            }
+
+            // --- Add Gill Arch Bounding Box ---
+            const archBoxHeight = archThicknessPx; // Use full thickness for collision box
+            const archBoxY = archY - archThicknessPx / 2; // Top Y of the arch collision box
+            const archBoxStartX = startX - filamentSpacingPx * 0.5; 
+            const archBoxWidth = (startX + totalFilamentWidth + filamentSpacingPx * 0.5) - archBoxStartX;
+            FILAMENT_STRUCTURE.push({
+                type: 'arch',
+                x: archBoxStartX,
+                y: archBoxY,
+                width: archBoxWidth,
+                height: archBoxHeight
+            });
+            // --- End Add Gill Arch --- 
+
+             console.log(`Generated ${FILAMENT_STRUCTURE.length} structure elements (flipped, wider cap).`);
+        }
+
+        function initParticles() {
+            console.log(`Initializing ${MAX_OXYGEN_PARTICLES} oxygen particles.`);
+            oxygenParticles = [];
+            for (let i = 0; i < MAX_OXYGEN_PARTICLES; i++) {
+                spawnOxygenParticle(false); // NEW: Spawn all initially off-screen left
+            }
+        }
+
+        function spawnOxygenParticle(isInitial = false) {
+            const logicalWidth = canvas.clientWidth;
+            const logicalHeight = canvas.clientHeight;
+            // Spawn randomly across width, below the bottom edge
+            const x = Math.random() * logicalWidth; 
+            const y = logicalHeight + OXYGEN_PARTICLE_RADIUS * 2; 
+            // Apply speed/jitter to correct axes
+            const speedY = WATER_FLOW_SPEED_Y + (Math.random() - 0.5) * WATER_FLOW_JITTER_MAIN * 2;
+            const speedX = (Math.random() - 0.5) * WATER_FLOW_JITTER_SIDE * 2;
+            oxygenParticles.push({ x: x, y: y, radius: OXYGEN_PARTICLE_RADIUS, vx: speedX, vy: speedY, absorbed: false });
+        }
+
+        function updateParticles(deltaTime) {
+            const logicalWidth = canvas.clientWidth;
+            const logicalHeight = canvas.clientHeight;
+
+            oxygenParticles.forEach(p => {
+                if(p.absorbed) return; // Skip already absorbed particles
+
+                // Update position
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // --- Simplified Collision Check for Absorption Only --- 
+                for (const element of FILAMENT_STRUCTURE) {
+                    // Only check collisions with lamellae for absorption
+                    if (element.type === 'lamella' && checkCollision(p, element)) {
+                        // Calculate absorption probability based on density
+                        const absorptionChance = BASE_ABSORPTION_RATE * (lamellaeDensity / 100.0);
+                        if (Math.random() < absorptionChance) {
+                            p.absorbed = true;
+                            break; // Absorbed, no need to check other lamellae
+                        } 
+                        // If not absorbed, do nothing - particle passes through
+                    }
+                }
+                // --- End Simplified Collision Check --- 
+
+                // Boundary checks (only if not absorbed)
+                if (!p.absorbed) {
+                    // Side Boundaries: Bounce
+                    if (p.x > logicalWidth - p.radius) {
+                        p.x = logicalWidth - p.radius;
+                        p.vx *= -1;
+                    } else if (p.x < p.radius) {
+                        p.x = p.radius;
+                        p.vx *= -1;
+                    }
+
+                    // Bottom Boundary: Bounce (in case jitter sends it down)
+                    if (p.y > logicalHeight - p.radius) {
+                        p.y = logicalHeight - p.radius;
+                        p.vy *= -1;
+                    } 
+                }
+            });
+
+            // --- Filter out absorbed particles AND particles that have gone off the TOP edge --- 
+            const originalCount = oxygenParticles.length;
+            oxygenParticles = oxygenParticles.filter(p => !p.absorbed && (p.y + p.radius) > 0);
+            const removedCount = originalCount - oxygenParticles.length;
+            // if (removedCount > 0) { console.log(`---> Filter removed ${removedCount} particles.`); }
+
+            // Respawn particles to maintain count
+             while (oxygenParticles.length < MAX_OXYGEN_PARTICLES) {
+                 spawnOxygenParticle(); // Calls the modified spawn function
+             }
+        }
+
+        function drawParticles() {
+            // console.log("Drawing particles...");
+            // Set styles common to most particles here
+            ctx.strokeStyle = darkenColor(COLOR_OXYGEN_PARTICLE, 30); // Add a border
+            ctx.lineWidth = 1;
+            ctx.font = `bold ${OXYGEN_PARTICLE_RADIUS}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            oxygenParticles.forEach(p => {
+                if (!p.absorbed) {
+                    // Set fill style *inside* the loop before drawing the circle
+                    ctx.fillStyle = COLOR_OXYGEN_PARTICLE;
+                    // Draw circle
+                ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                ctx.stroke();
+                    // Draw text - Set fill style specifically for text
+                    ctx.fillStyle = COLOR_OXYGEN_TEXT;
+                    ctx.fillText('O₂', p.x, p.y + 1); // Adjust position slightly
+                }
+            });
+        }
+
+        // Helper to darken color (needed for particle border)
+        function darkenColor(hex, percent) {
+           if (!hex || typeof hex !== 'string') return '#000000'; // Fallback
+           hex = hex.replace(/^#/, '');
+           if (hex.length === 3) { hex = hex.split('').map(char => char + char).join(''); }
+           if (hex.length !== 6) return '#000000'; // Invalid hex
+           let r = parseInt(hex.substring(0, 2), 16), g = parseInt(hex.substring(2, 4), 16), b = parseInt(hex.substring(4, 6), 16);
+           r = Math.max(0, Math.floor(r * (1 - percent / 100)));
+           g = Math.max(0, Math.floor(g * (1 - percent / 100)));
+           b = Math.max(0, Math.floor(b * (1 - percent / 100)));
+           return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+       }
+
+        // --- Collision Detection Helper ---
+        function checkCollision(particle, element) {
+            let rectX, rectY, rectWidth, rectHeight;
+
+            if (element.type === 'filament_body' || element.type === 'lamella') {
+                rectX = element.x;
+                rectY = element.y;
+                rectWidth = element.width;
+                rectHeight = element.height;
+            } else if (element.type === 'filament_cap') {
+                // Approximate cap as a rectangle for collision
+                rectX = element.x - element.radius;
+                rectY = element.y - element.radius; // Rough top Y of cap bounding box
+                rectWidth = element.radius * 2;
+                rectHeight = element.radius; // Only the top semi-circle part
+            } else {
+                return false; // Unknown type
+            }
+
+            // Find the closest point on the rectangle to the circle's center
+            const closestX = Math.max(rectX, Math.min(particle.x, rectX + rectWidth));
+            const closestY = Math.max(rectY, Math.min(particle.y, rectY + rectHeight));
+
+            // Calculate the distance between the circle's center and this closest point
+            const distX = particle.x - closestX;
+            const distY = particle.y - closestY;
+
+            // If the distance is less than the circle's radius, an overlap occurs
+            const distanceSquared = (distX * distX) + (distY * distY);
+            return distanceSquared < (particle.radius * particle.radius);
+        }
+
+        // --- CO2 Particle Functions ---
+        function handleCO2Spawning() {
+            if (FILAMENT_STRUCTURE.length === 0) return; // Structure not ready
+
+            // Use square root of density factor (overall rate reduced via BASE_CO2_SPAWN_CHANCE)
+            const chance = BASE_CO2_SPAWN_CHANCE * Math.sqrt(lamellaeDensity / 100.0);
+            FILAMENT_STRUCTURE.forEach(element => {
+                if (element.type === 'lamella') {
+                    if (Math.random() < chance) {
+                        spawnCarbonDioxideParticle(element);
+                    }
+                }
+            });
+        }
+
+        function spawnCarbonDioxideParticle(lamellaElement) {
+            // Spawn slightly offset from the lamella surface
+            const spawnOffset = OXYGEN_PARTICLE_RADIUS + 2; // Distance from surface
+            let x, y;
+            // Randomly pick top or bottom edge (relative to lamella center)
+            const yOffset = (Math.random() < 0.5 ? -1 : 1) * (lamellaElement.height / 2 + spawnOffset);
+            y = lamellaElement.y + lamellaElement.height / 2 + yOffset; 
+            // Random position along the lamella width
+            x = lamellaElement.x + Math.random() * lamellaElement.width;
+            
+            // Same initial velocity as O2
+            const speedY = WATER_FLOW_SPEED_Y + (Math.random() - 0.5) * WATER_FLOW_JITTER_MAIN * 2;
+            const speedX = (Math.random() - 0.5) * WATER_FLOW_JITTER_SIDE * 2;
+
+            // Use OXYGEN_PARTICLE_RADIUS for CO2 size
+            carbonDioxideParticles.push({ 
+                x: x, y: y, 
+                radius: OXYGEN_PARTICLE_RADIUS, 
+                vx: speedX, vy: speedY 
+                // No 'absorbed' needed
+            });
+        }
+
+        function updateCO2Particles(deltaTime) {
+            const logicalWidth = canvas.clientWidth;
+            const logicalHeight = canvas.clientHeight;
+
+            carbonDioxideParticles.forEach(p => {
+                // Update position
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Boundary checks (same as O2, no collision needed)
+                 // Side Boundaries: Bounce
+                 if (p.x > logicalWidth - p.radius) {
+                    p.x = logicalWidth - p.radius;
+                    p.vx *= -1;
+                } else if (p.x < p.radius) {
+                    p.x = p.radius;
+                    p.vx *= -1;
+                }
+                // Bottom Boundary: Bounce 
+                if (p.y > logicalHeight - p.radius) {
+                    p.y = logicalHeight - p.radius;
+                    p.vy *= -1;
+                } 
+                // Top boundary removal is handled by filter
+            });
+
+            // Filter out particles that have gone off the TOP edge
+            carbonDioxideParticles = carbonDioxideParticles.filter(p => (p.y + p.radius) > 0);
+            // No respawn needed for CO2, just spawn from lamellae
+        }
+
+        function drawCO2Particles() {
+            ctx.strokeStyle = darkenColor(COLOR_CO2_PARTICLE, -30); // Slightly lighten black border?
+            ctx.lineWidth = 1;
+            ctx.font = `bold ${OXYGEN_PARTICLE_RADIUS}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            carbonDioxideParticles.forEach(p => {
+                ctx.fillStyle = COLOR_CO2_PARTICLE;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = COLOR_CO2_TEXT;
+                ctx.fillText('CO₂', p.x, p.y + 1);
+            });
+        }
+
+        // --- Initialization ---
+        function init() {
+            console.log("Initializing Simulation (New)...");
+            if (!canvas || !ctx) {
+                console.error("Canvas not supported or not found!");
+                return;
+            }
+            setupEventListeners();
+            calculateMetrics(); // Initial calculation
+            resizeCanvas(); // Set initial canvas size, scale, and draw
+            // Make sure initial particle state is correct based on default view
+            if(currentView === 'particle' && particleVisibility.oxygen) {
+                initParticles();
+            }
+            requestAnimationFrame(animate); // Start the animation loop
+            console.log("Simulation Initialized.");
+        }
+
+        // Run Initialization when DOM is ready
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>
